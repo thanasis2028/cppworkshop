@@ -39,13 +39,13 @@ TEST_CASE("Type decuction examples", "[deduction]")
 
   // function return type deduction
   auto k = f(1, 1.2);
-  CHECK((std::is_same<decltype(k), void>::value));
+  CHECK((std::is_same<decltype(k), double>::value));
 
   // iterator cases
   typedef std::map<std::pair<unsigned long, std::string>, unsigned long> SomeMap;
   SomeMap some_map{{{2, "foo"}, 3}, {{3, "bar"}, 5}};
   auto itr = some_map.find(std::make_pair(2,"foo"));
-  CHECK((std::is_same<decltype(itr), void>::value));
+  CHECK((std::is_same<decltype(itr), SomeMap::iterator>::value));
   auto first_element = itr->first;
   CHECK((std::is_same<decltype(first_element), SomeMap::key_type>::value));
 
@@ -67,7 +67,7 @@ TEST_CASE("Type decuction examples", "[deduction]")
 
   // but this
   auto &&mv = 42;
-  CHECK((std::is_same<decltype(mv), void>::value));
+  CHECK((std::is_same<decltype(mv), int &&>::value));
   // or
   auto &&mv2 = std::move(a);  // move is no more than a cast to &&
   CHECK((std::is_same<decltype(mv2), int &&>::value));

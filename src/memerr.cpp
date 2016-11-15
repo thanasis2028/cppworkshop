@@ -4,7 +4,7 @@
 
 // uncomment for individual errors
 //#define DO_ERROR_ADDRESS_SANITIZER
-//#define DO_ERROR_STACK_PROTECTOR
+#define DO_ERROR_STACK_PROTECTOR
 //#define DO_ERROR_FORTIFY_SOURCE
 
 #define STR "deadbeefdeadbeefdeadbeefdeadbeef"
