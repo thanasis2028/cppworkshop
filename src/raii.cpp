@@ -4,18 +4,19 @@
 #include <random> // std::random_device etc
 #include <set> // std::set
 #include <unordered_set> // std::unordered_set
+#include <memory>
 
 namespace net {
 namespace util {
-template <typename T, T MIN, T MAX>
-static inline T random()
-{
-  static std::random_device rd;
-  static std::default_random_engine dre{rd()};
-  static std::uniform_int_distribution<T> prob_dist{MIN, MAX};
-  return prob_dist(dre);
-}
-static inline bool success() { return random<int, 0, 1>() ? true : false; }
+  template <typename T, T MIN, T MAX>
+  static inline T random()
+  {
+    static std::random_device rd;
+    static std::default_random_engine dre{rd()};
+    static std::uniform_int_distribution<T> prob_dist{MIN, MAX};
+    return prob_dist(dre);
+  }
+  static inline bool success() { return random<int, 0, 1>() ? true : false; }
 } // namespace util
 
 namespace stats {
@@ -41,7 +42,7 @@ bool connect(int sport) { return util::success() && ++stats::connected; }
 /// send network message
 bool send(const Message* req) { return util::success(); }
 /// receive network message
-bool recv(Message* resp) { return util::success(); }
+bool recv(std::unique_ptr<net::Message> const &resp) { return util::success(); }
 /// close port
 void close(int port) { ++stats::closed; }
 } // namespace net
@@ -58,8 +59,9 @@ std::unordered_set<int> port_scan(const std::set<int>& server_ports)
   std::unordered_set<int> active_ports; ///< active server ports
   for (auto sport : server_ports) {
     const int cport = net::client_port();
-    if (net::bind(cport) == false)
+    if (net::bind(cport) == false) {
       continue;
+    }
     if (net::connect(sport) == false) {
       net::close(cport);
       continue;
@@ -67,11 +69,12 @@ std::unordered_set<int> port_scan(const std::set<int>& server_ports)
     net::Message req;
     if (net::send(&req) == false) {
       net::close(sport);
+      net::close(cport);
       continue;
     }
-    net::Message* resp{nullptr};
+    std::unique_ptr<net::Message> resp{nullptr};
     try {
-      resp = new net::Message;
+      resp = std::make_unique<net::Message>();
     }
     catch (const std::bad_alloc&) {
       net::close(sport);
@@ -86,7 +89,6 @@ std::unordered_set<int> port_scan(const std::set<int>& server_ports)
       }
       active_ports.insert(sport);
     }
-    delete resp;
     net::close(sport);
     net::close(cport);
   }
@@ -98,7 +100,7 @@ int main(int argc, char* argv[])
 {
   std::set<int> server_ports{21, 22, 23, 80, 143, 161, 443};
   port_scan(server_ports);
-  assert(net::stats::bound + net::stats::connected == net::stats::closed);
+  assert(net::stats::bound + net::stats::connected <= net::stats::closed);
   assert(net::stats::msgs == 0);
   return 0;
 }

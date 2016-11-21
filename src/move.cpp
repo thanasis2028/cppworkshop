@@ -66,6 +66,8 @@ class File
     for (T c; ifs >> c; ++size_)
       buf_[size_] = c;
   }
+  File(File&& f)
+      : size_{f.size_}, buf_{std::move(f.buf_)} {f.size_ = 0;}
   File(const File& f)
       : size_{f.size_}, buf_{f.buf_} {}
   T& operator[](std::size_t pos) { return buf_[pos]; }
