@@ -47,6 +47,25 @@ bool recv(std::unique_ptr<net::Message> const &resp) { return util::success(); }
 void close(int port) { ++stats::closed; }
 } // namespace net
 
+class Port {
+  int number;
+  bool active;
+  public:
+  Port(int number): number(number), active(false) {}
+  bool bind() {
+    return active = net::bind(number);
+  }
+  
+  bool connect() {
+    return active = net::connect(number);
+  }
+  
+  ~Port() {
+    if (active)
+      net::close(number);
+  }
+};
+
 /**
  * @brief Scan a number of network server ports.
  *
@@ -59,17 +78,15 @@ std::unordered_set<int> port_scan(const std::set<int>& server_ports)
   std::unordered_set<int> active_ports; ///< active server ports
   for (auto sport : server_ports) {
     const int cport = net::client_port();
-    if (net::bind(cport) == false) {
+    Port my_sport(sport), my_cport(cport);
+    if (my_cport.bind() == false) {
       continue;
     }
-    if (net::connect(sport) == false) {
-      net::close(cport);
+    if (my_sport.connect() == false) {
       continue;
     }
     net::Message req;
     if (net::send(&req) == false) {
-      net::close(sport);
-      net::close(cport);
       continue;
     }
     std::unique_ptr<net::Message> resp{nullptr};
@@ -77,20 +94,14 @@ std::unordered_set<int> port_scan(const std::set<int>& server_ports)
       resp = std::make_unique<net::Message>();
     }
     catch (const std::bad_alloc&) {
-      net::close(sport);
-      net::close(cport);
     }
     if (net::recv(resp)) {
       // let's try again
       if (net::send(&req) == false || net::recv(resp) == false) {
-        net::close(sport);
-        net::close(cport);
         continue;
       }
       active_ports.insert(sport);
     }
-    net::close(sport);
-    net::close(cport);
   }
   return active_ports;
 }

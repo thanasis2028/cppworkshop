@@ -5,7 +5,9 @@
 #include <iostream> // std::cout
 #include <limits> // std::numeric_limits
 #include <random> // std::random_device etc
-#include <vector> // std::vector
+#include <vector> // std::
+#include <iostream> // std::cout
+#include <thread> // std::thread
 
 /**
  * @brief Return a container with randomly initialized values.
@@ -54,13 +56,28 @@ void task(std::vector<int>& vec, std::deque<int>& deq)
   std::sort(deq.begin(), deq.end());
 }
 
+void parallel_task(std::vector<int>& vec, std::deque<int>& deq)
+{
+  std::thread thread1(std::sort<std::vector<int>::iterator>, vec.begin(), vec.end());
+  std::thread thread2(std::sort<std::deque<int>::iterator>, deq.begin(), deq.end());
+  thread1.join();
+  thread2.join();
+}
+
 
 int main(int argc, char* argv[])
 {
   constexpr std::size_t size = 1'000'000;
   auto vec = container<std::vector<int>>(size);
   auto deq = container<std::deque<int>>(size);
+  auto vec2(vec);
+  auto deq2(deq);
+  
+  std::cout << "Serial ";
   timed_exec(task, std::ref(vec), std::ref(deq));
+  
+  std::cout << "Parallel ";
+  timed_exec(parallel_task, std::ref(vec2), std::ref(deq2));
   
   return 0;
 }
